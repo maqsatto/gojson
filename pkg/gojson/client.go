@@ -9,7 +9,7 @@ type Client struct {
 	exec *query.Executor
 }
 
-func New(eng engine.Engine) *Client {
+func NewClient(eng engine.Engine) *Client {
 	return &Client{exec: query.NewExecutor(eng)}
 }
 
