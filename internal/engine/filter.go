@@ -3,9 +3,18 @@ package engine
 import (
 	"cmp"
 	"sort"
+	"strings"
 )
 
-func match(row Row, conds []Condition) (bool, error) {
+func matchQuery(row Row, q Query) (bool, error) {
+	if q.Filter != nil {
+		return evalExpr(row, *q.Filter)
+	}
+
+	return matchCondsAND(row, q.Where)
+}
+
+func matchCondsAND(row Row, conds []Condition) (bool, error) {
 	for _, c := range conds {
 		v, ok := row[c.Field]
 		if !ok {
@@ -22,8 +31,58 @@ func match(row Row, conds []Condition) (bool, error) {
 	return true, nil
 }
 
+func evalExpr(row Row, e Expr) (bool, error) {
+	if e.Cond != nil {
+		c := *e.Cond
+		v, ok := row[c.Field]
+		if !ok {
+			return false, nil
+		}
+		return compare(v, c.Op, c.Value)
+	}
+	if e.Group != nil {
+		g := e.Group
+		op := strings.ToUpper(strings.TrimSpace(g.Op))
+		if op == "" {
+			op = "AND"
+		}
+
+		if op == "AND" {
+			for _, child := range g.Expr {
+				ok, err := evalExpr(row, child)
+				if err != nil {
+					return false, err
+				}
+				if !ok {
+					return false, nil
+				}
+			}
+			return true, nil
+		}
+
+		if op == "OR" {
+			anyTrue := false
+			for _, child := range g.Expr {
+				ok, err := evalExpr(row, child)
+				if err != nil {
+					return false, err
+				}
+				if ok {
+					anyTrue = true
+					break
+				}
+			}
+			return anyTrue, nil
+		}
+
+		return false, ErrBadRequest
+	}
+
+	return false, ErrBadRequest
+}
+
 func compare(a any, op string, b any) (bool, error) {
-	// numbers: json.Unmarshal => float64
+	// numbers (json => float64)
 	if af, ok := toFloat(a); ok {
 		bf, ok := toFloat(b)
 		if !ok {
@@ -87,7 +146,7 @@ func compare(a any, op string, b any) (bool, error) {
 		}
 	}
 
-	// fallback: only equality
+	// fallback eq/ne
 	switch op {
 	case "=", "==":
 		return a == b, nil
@@ -119,7 +178,6 @@ func applySort(rows []Row, sortBy string, desc bool) {
 	if sortBy == "" {
 		return
 	}
-
 	sort.Slice(rows, func(i, j int) bool {
 		ai, aok := rows[i][sortBy]
 		aj, bok := rows[j][sortBy]
@@ -133,7 +191,6 @@ func applySort(rows []Row, sortBy string, desc bool) {
 			return desc
 		}
 
-		// numeric first
 		if af, ok := toFloat(ai); ok {
 			bf, ok2 := toFloat(aj)
 			if !ok2 {
@@ -145,7 +202,6 @@ func applySort(rows []Row, sortBy string, desc bool) {
 			return af < bf
 		}
 
-		// string next
 		as, ok := ai.(string)
 		bs, ok2 := aj.(string)
 		if ok && ok2 {
@@ -156,7 +212,6 @@ func applySort(rows []Row, sortBy string, desc bool) {
 			return c < 0
 		}
 
-		// fallback: do nothing stable-ish
 		return !desc
 	})
 }

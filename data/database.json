@@ -15,6 +15,11 @@
       "age": 19,
       "id": 1,
       "name": "Aruzhan"
+    },
+    {
+      "age": 19,
+      "id": 2,
+      "name": "Aruzhan"
     }
   ]
 }

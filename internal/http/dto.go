@@ -5,6 +5,7 @@ import "github.com/maqsatto/gojson/internal/engine"
 type SelectReq struct {
 	Table  string             `json:"table"`
 	Where  []engine.Condition `json:"where,omitempty"`
+	Filter *engine.Expr       `json:"filter,omitempty"`
 	Limit  int                `json:"limit,omitempty"`
 	Offset int                `json:"offset,omitempty"`
 	SortBy string             `json:"sortBy,omitempty"`

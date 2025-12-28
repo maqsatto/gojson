@@ -7,4 +7,5 @@ var (
 	ErrInvalidOp     = errors.New("invalid operator")
 	ErrTypeMismatch  = errors.New("type mismatch")
 	ErrBadRequest    = errors.New("bad request")
+	ErrDuplicateID   = errors.New("id already exist")
 )

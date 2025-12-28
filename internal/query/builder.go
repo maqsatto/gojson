@@ -38,3 +38,18 @@ func (b *Builder) SortBy(field string, desc bool) *Builder {
 
 func (b *Builder) Table() string       { return b.table }
 func (b *Builder) Query() engine.Query { return b.q }
+
+func (b *Builder) Filter(expr engine.Expr) *Builder {
+	b.q.Filter = &expr
+	return b
+}
+
+func And(expr ...engine.Expr) engine.Expr {
+	return engine.Expr{Group: &engine.Group{Op: "AND", Expr: expr}}
+}
+func Or(expr ...engine.Expr) engine.Expr {
+	return engine.Expr{Group: &engine.Group{Op: "OR", Expr: expr}}
+}
+func C(field, op string, value any) engine.Expr {
+	return engine.Expr{Cond: &engine.Condition{Field: field, Op: op, Value: value}}
+}

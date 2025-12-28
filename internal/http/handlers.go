@@ -25,6 +25,7 @@ func (h *Handler) Select(c *gin.Context) {
 	rows, err := h.eng.Select(req.Table, engine.Query{
 		Where:  req.Where,
 		Limit:  req.Limit,
+		Filter: req.Filter,
 		Offset: req.Offset,
 		SortBy: req.SortBy,
 		Desc:   req.Desc,
