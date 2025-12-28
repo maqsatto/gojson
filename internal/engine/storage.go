@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -13,19 +14,46 @@ type JSONStorage struct {
 }
 
 func NewJSONStorage(path string) (*JSONStorage, error) {
-	storage := &JSONStorage{
+	s := &JSONStorage{
 		path: path,
 		data: make(map[string][]Row),
 	}
-	if b, err := os.ReadFile(path); err == nil && len(b) > 0 {
-		_ = json.Unmarshal(b, &storage.data)
+
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return nil, err
 	}
-	return storage, nil
+
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			if err := s.saveLockedAtomic(); err != nil {
+				return nil, err
+			}
+			return s, nil
+		}
+		return nil, err
+	}
+
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if len(b) == 0 {
+		return s, nil
+	}
+	_ = json.Unmarshal(b, &s.data)
+	return s, nil
 }
 
-func (s *JSONStorage) save() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	b, _ := json.MarshalIndent(s.data, "", "  ")
-	return os.WriteFile(s.path, b, 0644)
+func (s *JSONStorage) saveLockedAtomic() error {
+	tmp := s.path + ".tmp"
+
+	b, err := json.MarshalIndent(s.data, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(tmp, b, 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, s.path)
 }

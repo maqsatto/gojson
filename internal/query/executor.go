@@ -3,17 +3,25 @@ package query
 import "github.com/maqsatto/gojson/internal/engine"
 
 type Executor struct {
-	engine engine.Engine
+	eng engine.Engine
 }
 
 func NewExecutor(e engine.Engine) *Executor {
-	return &Executor{engine: e}
+	return &Executor{eng: e}
 }
 
-func (e Executor) All(b *Builder) ([]engine.Row, error) {
-	return e.engine.Select(b.table, b.query)
+func (x *Executor) All(b *Builder) ([]engine.Row, error) {
+	return x.eng.Select(b.Table(), b.Query())
 }
 
-func (e Executor) Insert(table string, row engine.Row) error {
-	return e.engine.Insert(table, row)
+func (x *Executor) Insert(table string, row engine.Row) error {
+	return x.eng.Insert(table, row)
+}
+
+func (x *Executor) Update(b *Builder, set engine.Row) (int, error) {
+	return x.eng.Update(b.Table(), b.Query(), set)
+}
+
+func (x *Executor) Delete(b *Builder) (int, error) {
+	return x.eng.Delete(b.Table(), b.Query())
 }
